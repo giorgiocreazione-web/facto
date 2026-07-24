@@ -197,6 +197,7 @@
   .compose-intro{font-family:var(--fm);font-size:11px;color:var(--mute);margin-bottom:16px;letter-spacing:.4px}
   .compose-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(322px,1fr));gap:16px;align-content:start}
   .fcard{border:1px solid var(--hair);border-radius:8px;background:linear-gradient(180deg,var(--panel),var(--panel2));padding:15px 17px}
+  .fcard .fnote{font-family:var(--fm);font-size:10.5px;color:var(--mute);line-height:1.55;margin:-2px 0 10px}
   .fcard h3{font-family:var(--fm);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);margin-bottom:13px;display:flex;align-items:center;gap:8px;opacity:.92}
   .field{margin-bottom:10px}
   .field label{display:block;font-family:var(--fm);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--mute);margin-bottom:4px}
@@ -803,6 +804,19 @@ const I18N={
     compose_pro_h:"Entità, task e relazioni", compose_pro_b:"Arrivano col Pro — insieme al CRM completo e ai backup. Fatti, handoff e chiusure sono tuoi, qui, gratis per sempre.",
     tree_areas:"AREE", tree_types:"TIPI", sb_facts:"fatti vivi", sb_areas:"aree",
     st_nominal:"NOMINALE", st_caution:"ATTENZIONE", st_critical:"CRITICO", st_empty:"NESSUNA MEMORIA",
+    cmp_fact_h:"＋ Nuovo fatto", cmp_area_h:"＋ Nuova area", cmp_area_rm_h:"✕ Rimuovi area",
+    cmp_ho_h:"✎ Handoff (testimone)", cmp_close_h:"✕ Chiudi fatti",
+    cmp_l_proj:"Area", cmp_l_type:"Tipo", cmp_l_text:"Contenuto", cmp_l_slug:"Nome breve (slug)",
+    cmp_l_path:"Cartella", cmp_l_label:"Etichetta (facoltativa)", cmp_l_area:"Area",
+    cmp_l_like:"Testo da cercare (facoltativo)",
+    cmp_b_fact:"Aggiungi fatto", cmp_b_area:"Crea area", cmp_b_area_rm:"Rimuovi area",
+    cmp_b_ho:"Salva handoff", cmp_b_close:"Chiudi (resta nella storia)",
+    cmp_p_text:"es. API REST versionata /v1 con JWT", cmp_p_slug:"es. engine",
+    cmp_p_path:"es. src/engine  ·  . = tutta la cartella", cmp_p_label:"es. Motore di gioco",
+    cmp_p_ho:"cosa hai fatto + dove si stava andando", cmp_p_like:"restringe ai fatti che contengono…",
+    cmp_area_note:"Un\'area = un modulo del progetto (o un progetto, se questa cartella ne contiene diversi).",
+    cmp_rm_note:"I fatti dell\'area restano nella storia: sparisce solo dalle viste.",
+    whole_proj:"TUTTO IL PROGETTO",
     empty_t:"Nessuna memoria, ancora.",
     empty_b:"Facto è collegato a questo progetto, ma non sa ancora nulla: le aree non sono state disegnate.",
     empty_1:"<b>Apri il tuo agente AI</b> in questa cartella (Claude Code, Cursor…): riceve il playbook di setup, esplora il progetto e <b>ti propone le aree</b>.",
@@ -866,6 +880,19 @@ const I18N={
     compose_pro_h:"Entities, tasks & relations", compose_pro_b:"They come with Pro — along with the full CRM and backups. Facts, handoffs and closures are yours, right here, free forever.",
     tree_areas:"AREAS", tree_types:"TYPES", sb_facts:"live facts", sb_areas:"areas",
     st_nominal:"NOMINAL", st_caution:"CAUTION", st_critical:"CRITICAL", st_empty:"NO MEMORY YET",
+    cmp_fact_h:"＋ New fact", cmp_area_h:"＋ New area", cmp_area_rm_h:"✕ Remove area",
+    cmp_ho_h:"✎ Handoff (the baton)", cmp_close_h:"✕ Close facts",
+    cmp_l_proj:"Area", cmp_l_type:"Type", cmp_l_text:"Content", cmp_l_slug:"Short name (slug)",
+    cmp_l_path:"Folder", cmp_l_label:"Label (optional)", cmp_l_area:"Area",
+    cmp_l_like:"Text to match (optional)",
+    cmp_b_fact:"Add fact", cmp_b_area:"Create area", cmp_b_area_rm:"Remove area",
+    cmp_b_ho:"Save handoff", cmp_b_close:"Close (kept in history)",
+    cmp_p_text:"e.g. REST API versioned /v1 with JWT", cmp_p_slug:"e.g. engine",
+    cmp_p_path:"e.g. src/engine  ·  . = the whole folder", cmp_p_label:"e.g. Game engine",
+    cmp_p_ho:"what you did + where you were heading", cmp_p_like:"only facts containing…",
+    cmp_area_note:"An area = a module of the project (or a project, if this folder holds several).",
+    cmp_rm_note:"The area\'s facts stay in history: it only disappears from the views.",
+    whole_proj:"WHOLE PROJECT",
     empty_t:"No memory yet.",
     empty_b:"Facto is wired to this project, but it knows nothing so far: the areas have not been designed.",
     empty_1:"<b>Open your AI agent</b> in this folder (Claude Code, Cursor…): it gets the setup playbook, explores the project and <b>proposes the areas to you</b>.",
@@ -1356,28 +1383,44 @@ async function loadCompose(){
   if(!STATE) return;
   const FREE=isFree();
   try{const r=await fetch("/api/crm",{cache:"no-store"});CRMCACHE=await r.json();}catch(e){CRMCACHE={entita:[],task:[]};}
-  const psel=projOptions().map(p=>_opt(p,p.toUpperCase())).join("");
+  // 'globale' = i fatti che valgono per TUTTO il progetto (preferenze trasversali,
+  // stato git). Senza un nome parlante nessuno capisce cosa sia: succede davvero.
+  const psel=projOptions().map(p=>_opt(p, p==="globale"?t("whole_proj"):p.toUpperCase())).join("");
   const esel=(CRMCACHE.entita||[]).map(e=>_opt(e.id,e.nome+" · "+e.tipo)).join("");
   const tsel=(CRMCACHE.task||[]).map(t=>_opt(t.id,t.titolo+" ["+t.stato+"]")).join("");
   $("#composeIntro").textContent=t("compose_intro");
   /* card mem-based: per TUTTI (fatti, handoff, chiusura). Le card CRM sono Pro. */
+  const areeSel=(STATE&&STATE.progetti||[]).filter(p=>p.slug!=="globale")
+                  .map(p=>_opt(p.slug,(p.slug||"").toUpperCase())).join("");
   const cardsMem=`
-    <div class="fcard"><h3>＋ Nuovo fatto</h3>
-      <div class="field"><label>Progetto</label><select id="f_prog">${psel}</select></div>
-      <div class="field"><label>Tipo</label><select id="f_tipo">${typeOptions()}</select></div>
-      <div class="field"><label>Contenuto</label><textarea id="f_cont" placeholder="es. API REST versionata /v1 con JWT"></textarea></div>
-      <button class="fbtn" data-w="fatto">Aggiungi fatto</button></div>
+    <div class="fcard"><h3>${esc(t("cmp_fact_h"))}</h3>
+      <div class="field"><label>${esc(t("cmp_l_proj"))}</label><select id="f_prog">${psel}</select></div>
+      <div class="field"><label>${esc(t("cmp_l_type"))}</label><select id="f_tipo">${typeOptions()}</select></div>
+      <div class="field"><label>${esc(t("cmp_l_text"))}</label><textarea id="f_cont" placeholder="${esc(t("cmp_p_text"))}"></textarea></div>
+      <button class="fbtn" data-w="fatto">${esc(t("cmp_b_fact"))}</button></div>
 
-    <div class="fcard"><h3>✎ Handoff (testimone)</h3>
-      <div class="field"><label>Progetto</label><select id="h_prog">${psel}</select></div>
-      <div class="field"><label>Testo</label><textarea id="h_testo" placeholder="cosa hai fatto + dove si stava andando"></textarea></div>
-      <button class="fbtn" data-w="handoff">Salva handoff</button></div>
+    <div class="fcard"><h3>${esc(t("cmp_area_h"))}</h3>
+      <div class="field"><label>${esc(t("cmp_l_slug"))}</label><input id="a_slug" placeholder="${esc(t("cmp_p_slug"))}"></div>
+      <div class="field"><label>${esc(t("cmp_l_path"))}</label><input id="a_path" placeholder="${esc(t("cmp_p_path"))}"></div>
+      <div class="field"><label>${esc(t("cmp_l_label"))}</label><input id="a_label" placeholder="${esc(t("cmp_p_label"))}"></div>
+      <p class="fnote">${esc(t("cmp_area_note"))}</p>
+      <button class="fbtn" data-w="area">${esc(t("cmp_b_area"))}</button></div>
 
-    <div class="fcard"><h3>✕ Chiudi fatti</h3>
-      <div class="field"><label>Progetto</label><select id="c_prog">${psel}</select></div>
-      <div class="field"><label>Tipo</label><select id="c_tipo">${typeOptions()}</select></div>
-      <div class="field"><label>Testo da cercare (facoltativo)</label><input id="c_like" placeholder="restringe ai fatti che contengono…"></div>
-      <button class="fbtn" data-w="fatto-close">Chiudi (resta nella storia)</button></div>`;
+    <div class="fcard"><h3>${esc(t("cmp_ho_h"))}</h3>
+      <div class="field"><label>${esc(t("cmp_l_proj"))}</label><select id="h_prog">${psel}</select></div>
+      <div class="field"><label>${esc(t("cmp_l_text"))}</label><textarea id="h_testo" placeholder="${esc(t("cmp_p_ho"))}"></textarea></div>
+      <button class="fbtn" data-w="handoff">${esc(t("cmp_b_ho"))}</button></div>
+
+    <div class="fcard"><h3>${esc(t("cmp_close_h"))}</h3>
+      <div class="field"><label>${esc(t("cmp_l_proj"))}</label><select id="c_prog">${psel}</select></div>
+      <div class="field"><label>${esc(t("cmp_l_type"))}</label><select id="c_tipo">${typeOptions()}</select></div>
+      <div class="field"><label>${esc(t("cmp_l_like"))}</label><input id="c_like" placeholder="${esc(t("cmp_p_like"))}"></div>
+      <button class="fbtn" data-w="fatto-close">${esc(t("cmp_b_close"))}</button></div>
+
+    <div class="fcard"><h3>${esc(t("cmp_area_rm_h"))}</h3>
+      <div class="field"><label>${esc(t("cmp_l_area"))}</label><select id="ar_slug">${areeSel||_opt("","—")}</select></div>
+      <p class="fnote">${esc(t("cmp_rm_note"))}</p>
+      <button class="fbtn" data-w="area-remove">${esc(t("cmp_b_area_rm"))}</button></div>`;
   if(FREE){
     $("#composeGrid").innerHTML=cardsMem+`
       <div class="fcard pro-teaser"><h3>◇ ${esc(t("compose_pro_h"))}</h3>
@@ -1421,6 +1464,8 @@ function composeSubmit(op, btn){
   else if(op==="task-stato")  p={id:$("#s_id").value,stato:$("#s_stato").value};
   else if(op==="rel")         p={da_tipo:"entita",da_id:$("#r_da").value,rel:$("#r_rel").value,a_tipo:"entita",a_id:$("#r_a").value};
   else if(op==="fatto-close") p={progetto:$("#c_prog").value,tipo:$("#c_tipo").value,like:$("#c_like").value};
+  else if(op==="area")        p={slug:$("#a_slug").value,path:$("#a_path").value,label:$("#a_label").value};
+  else if(op==="area-remove") p={slug:$("#ar_slug").value};
   api(op,p,btn);
 }
 

@@ -467,7 +467,25 @@ def w_ingest_git(d):
     _cache.update(t=0.0)                 # il prossimo /api/state legge lo stato fresco
     return {"msg": mem.T("memory realigned to git", "memoria riallineata a git")}
 
+def w_area(d):
+    """Crea/aggiorna un'area DALLA DASHBOARD: chi non vive nel terminale deve
+    poter disegnare la struttura del progetto come scrive un fatto."""
+    slug, path, tot, nuovo, esiste = mem.add_area(d.get("slug"), d.get("path"), d.get("label"))
+    warn = "" if esiste else mem.T("  (that folder does not exist yet)",
+                                   "  (quella cartella non esiste ancora)")
+    verbo = mem.T("added", "aggiunta") if nuovo else mem.T("updated", "aggiornata")
+    return {"msg": mem.T(f"area «{slug}» {verbo} -> {path} [{tot} total]{warn}",
+                         f"area «{slug}» {verbo} -> {path} [{tot} in tutto]{warn}")}
+
+
+def w_area_remove(d):
+    slug, tot = mem.remove_area(d.get("slug"))
+    return {"msg": mem.T(f"area «{slug}» removed [{tot} left] — its facts stay in history",
+                         f"area «{slug}» rimossa [restano {tot}] — i suoi fatti restano nella storia")}
+
+
 _WRITE = {"fatto": w_fatto, "fatto-close": w_fatto_close, "handoff": w_handoff,
+          "area": w_area, "area-remove": w_area_remove,
           "entita": w_entita, "entita-close": w_entita_close,
           "task": w_task, "task-stato": w_task_stato, "rel": w_rel,
           "backup-create": w_backup_create, "backup-restore": w_backup_restore,

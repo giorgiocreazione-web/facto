@@ -521,6 +521,7 @@ def _fasi(tmp):
     base = f"http://127.0.0.1:{porta}"
     pagina, stato, derr = "", {}, ""
     scritto, ritrovato, area_a_caldo = {}, False, False
+    area_web = {}
     try:
         fine = time.time() + 40
         while time.time() < fine:
@@ -560,6 +561,18 @@ def _fasi(tmp):
                 with urllib.request.urlopen(base + "/api/state", timeout=5) as r:
                     st3 = json.loads(r.read().decode("utf-8", "replace"))
                 area_a_caldo = any(p.get("slug") == "live" for p in st3.get("progetti", []))
+                # crea/rimuovi AREA dalla dashboard (Componi): chi non vive nel
+                # terminale deve poter disegnare la struttura da browser.
+                for op, dati, atteso in (
+                        ("area", {"slug": "dashcreata", "path": "src"}, "dashcreata"),
+                        ("area-remove", {"slug": "dashcreata"}, "removed")):
+                    rq = urllib.request.Request(
+                        base + "/api/write/" + op, data=json.dumps(dati).encode("utf-8"),
+                        headers={"Content-Type": "application/json"}, method="POST")
+                    with urllib.request.urlopen(rq, timeout=5) as r:
+                        area_web[op] = json.loads(r.read().decode("utf-8", "replace"))
+                    if atteso not in str(area_web[op]):
+                        area_web[op] = {"errore": "risposta inattesa", **area_web[op]}
             except Exception as e:
                 area_a_caldo = False
                 derr = derr or str(e)
@@ -580,6 +593,9 @@ def _fasi(tmp):
           str(scritto)[:100])
     check(area_a_caldo,
           "dashboard: vede un'area creata MENTRE e' aperta (hot-reload del config)")
+    check(area_web.get("area", {}).get("ok") is True and area_web.get("area-remove", {}).get("ok") is True,
+          "dashboard: si crea e si rimuove un'AREA dal browser (Componi)",
+          str(area_web.get("area", {}).get("msg", ""))[:70])
     check(isinstance(stato, dict) and stato, "dashboard /api/state risponde JSON",
           ", ".join(sorted(stato)[:6]))
 
