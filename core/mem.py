@@ -522,6 +522,13 @@ def semaforo_progetto(con, slug, path):
     """(colore, dettagli) del semaforo per un progetto. Condiviso da health e dashboard.
     Con git: misura quanto il registro diverge dal codice reale.
     Senza git: misura solo i bloccanti aperti (lo stato non si auto-verifica)."""
+    # Area SENZA NEMMENO UN FATTO: non e' "critica", e' NUOVA. Dire ROSSO qui e'
+    # lo stesso errore, rovesciato, del dire VERDE su una memoria vuota: si
+    # allarma chi ha appena creato l'area e non ha ancora scritto niente.
+    if not con.execute("SELECT 1 FROM fatti WHERE progetto=? AND valido_fino_a IS NULL LIMIT 1",
+                       (slug,)).fetchone():
+        return ("NUOVO", [T("empty area — nothing recorded here yet",
+                            "area vuota — qui non è ancora stato registrato nulla")])
     if not GIT_ON:
         nb = con.execute("SELECT COUNT(*) FROM fatti WHERE progetto=? AND tipo='bloccante'"
                          " AND valido_fino_a IS NULL", (slug,)).fetchone()[0]
@@ -567,7 +574,8 @@ def semaforo_progetto(con, slug, path):
                                    f"{sospetti} fatt{'i' if sospetti != 1 else 'o'} forse superat{'i' if sospetti != 1 else 'o'} dal codice"))
     return (sem, det)
 
-SEM_DISPLAY = {"VERDE": T("GREEN", "VERDE"), "GIALLO": T("YELLOW", "GIALLO"), "ROSSO": T("RED", "ROSSO")}
+SEM_DISPLAY = {"VERDE": T("GREEN", "VERDE"), "GIALLO": T("YELLOW", "GIALLO"),
+               "ROSSO": T("RED", "ROSSO"), "NUOVO": T("NEW", "NUOVA")}
 
 def cmd_health(con, args):
     """SEMAFORO DI FIDUCIA: il sistema dice DA SOLO quando si sta perdendo."""
@@ -586,15 +594,18 @@ def cmd_health(con, args):
     if not GIT_ON:
         print(T("  (git off: the light only watches open blockers)",
                 "  (git off: il semaforo guarda solo i bloccanti aperti)"))
-    rank = {"VERDE": 0, "GIALLO": 1, "ROSSO": 2}
-    peggiore = "VERDE"
+    rank = {"NUOVO": -1, "VERDE": 0, "GIALLO": 1, "ROSSO": 2}
+    peggiore = None          # se TUTTE le aree sono nuove, il globale e' NUOVO:
+                             # dire "fidati" quando non c'e' ancora nulla sarebbe
+                             # la stessa bugia del verde su memoria vuota.
     for slug, path in PROGETTI.items():
         sem, det = semaforo_progetto(con, slug, path)
-        if rank[sem] > rank[peggiore]:
+        if peggiore is None or rank[sem] > rank[peggiore]:
             peggiore = sem
         riga = ", ".join(det) if det else T("aligned", "allineato")
         print(f"  [{SEM_DISPLAY[sem]:6}] {slug.upper():9} · {riga}")
     print("  ----")
+    peggiore = peggiore or "NUOVO"
     print(T(f"  GLOBAL: {SEM_DISPLAY[peggiore]}   (GREEN=trust it · YELLOW=verify · RED=refresh/do not trust)",
             f"  GLOBALE: {peggiore}   (VERDE=fidati · GIALLO=verifica · ROSSO=rinfresca/non fidarti)"))
 

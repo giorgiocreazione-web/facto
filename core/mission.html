@@ -803,7 +803,9 @@ const TYPES={
 // etichetta del tipo nella lingua attiva (le=EN provvisoria, ratifica Gio; l=IT)
 const tl=k=>{const t=TYPES[k];if(!t)return k;return (LANG==="en"?(t.le||t.l):t.l);};
 const tcol=t=>(TYPES[t]||{c:"#7f8aa0"}).c;
-const SMAP={VERDE:["st_nominal","#37e0a4"],GIALLO:["st_caution","#ffc14d"],ROSSO:["st_critical","#ff5d6e"]};
+const SMAP={VERDE:["st_nominal","#37e0a4"],GIALLO:["st_caution","#ffc14d"],ROSSO:["st_critical","#ff5d6e"],
+            /* area senza un solo fatto: non e' critica, e' NUOVA (grigio, nessun allarme) */
+            NUOVO:["st_new","#8a93a6"]};
 const $=s=>document.querySelector(s);
 let STATE=null,curView="graph",lastConn=0,connOk=null;
 
@@ -819,6 +821,7 @@ const I18N={
     compose_pro_h:"Entità, task e relazioni", compose_pro_b:"Arrivano col Pro — insieme al CRM completo e ai backup. Fatti, handoff e chiusure sono tuoi, qui, gratis per sempre.",
     tree_areas:"AREE", tree_types:"TIPI", sb_facts:"fatti vivi", sb_areas:"aree",
     st_nominal:"NOMINALE", st_caution:"ATTENZIONE", st_critical:"CRITICO", st_empty:"NESSUNA MEMORIA",
+    st_new:"NUOVA",
     cmp_fact_h:"＋ Nuovo fatto", cmp_area_h:"＋ Nuova area", cmp_area_rm_h:"✕ Rimuovi area",
     cmp_ho_h:"✎ Handoff (testimone)", cmp_close_h:"✕ Chiudi fatti",
     cmp_l_proj:"Area", cmp_l_type:"Tipo", cmp_l_text:"Contenuto", cmp_l_slug:"Nome breve (slug)",
@@ -897,6 +900,7 @@ const I18N={
     compose_pro_h:"Entities, tasks & relations", compose_pro_b:"They come with Pro — along with the full CRM and backups. Facts, handoffs and closures are yours, right here, free forever.",
     tree_areas:"AREAS", tree_types:"TYPES", sb_facts:"live facts", sb_areas:"areas",
     st_nominal:"NOMINAL", st_caution:"CAUTION", st_critical:"CRITICAL", st_empty:"NO MEMORY YET",
+    st_new:"NEW",
     cmp_fact_h:"＋ New fact", cmp_area_h:"＋ New area", cmp_area_rm_h:"✕ Remove area",
     cmp_ho_h:"✎ Handoff (the baton)", cmp_close_h:"✕ Close facts",
     cmp_l_proj:"Area", cmp_l_type:"Type", cmp_l_text:"Content", cmp_l_slug:"Short name (slug)",
@@ -1029,14 +1033,33 @@ a11yify();setInterval(a11yify,1200);
 
 /* poll */
 async function poll(){
-  try{const r=await fetch("/api/state",{cache:"no-store"});const j=await r.json();if(j.errore)throw 0;
-    STATE=j;lastConn=performance.now();setConn(true);render();
+  /* DUE cose diverse, due try separati: prima "il server risponde?", poi "la
+     pagina si disegna?". Prima erano nello stesso blocco, quindi un errore JS
+     nel rendering — o un 404 su un endpoint che nel Free non esiste — faceva
+     comparire «server irraggiungibile» mentre il server rispondeva benissimo. */
+  let j;
+  try{
+    const r=await fetch("/api/state",{cache:"no-store"});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    j=await r.json();
+    if(j.errore) throw new Error(j.errore);
+    setConn(true);                       /* il server HA risposto: online, punto */
+  }catch(e){
+    setConn(false);                      /* SOLO qui: rete o server davvero giu' */
+    return;
+  }
+  try{
+    STATE=j;lastConn=performance.now();render();
     if(isFree()&&PRO_LOCKED.includes(curView)){renderProCard(curView);}
     /* deep-link #compose a freddo: al primo giro STATE non c'era e loadCompose
        era uscita a vuoto — appena i dati arrivano, la griglia si popola */
     if(curView==="compose"&&!$("#composeGrid").childElementCount)loadCompose();
-  if((curView==="crm"&&!isFree())||curView==="stats")pollExtra();}
-  catch(e){setConn(false);}
+    if((curView==="crm"&&!isFree())||curView==="stats")pollExtra();
+  }catch(e){
+    /* un bug nel disegno non e' un problema di connessione: si vede in console,
+       non si spaccia per «offline» */
+    console.error("[facto] errore nel rendering della dashboard:", e);
+  }
 }
 async function pollExtra(){
   try{
@@ -1310,9 +1333,11 @@ function loadBrief(){
   fetch("/api/brief?slug="+encodeURIComponent(slug),{cache:"no-store"})
     .then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
     .then(renderBrief)
-    .catch(()=>{                       /* prima: .catch(()=>{}) — errore INGHIOTTITO,
+    .catch(err=>{                      /* prima: .catch(()=>{}) — errore INGHIOTTITO,
                                           restavano i fatti dell'area precedente */
-      setConn(false);
+      /* fetch RIGETTATA = rete/server giu'; errore HTTP = server vivo che si
+         lamenta. Confonderli accendeva «offline» con il server funzionante. */
+      if(err instanceof TypeError) setConn(false);
       const g=$("#brSections");
       if(g)g.innerHTML='<div class="brempty">'+esc(t("off_brief"))+'</div>';
     });

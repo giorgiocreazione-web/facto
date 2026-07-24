@@ -99,17 +99,20 @@ def git_parts(con):
                           " AND valido_fino_a IS NULL").fetchone()
         gitline = row["contenuto"] if row else ""
         sem = {}
-        rank = {"VERDE": 0, "GIALLO": 1, "ROSSO": 2}
-        peggiore = "VERDE"
+        # stessa scala di mem.cmd_health: un'area NUOVA (senza un solo fatto) non
+        # tinge di rosso il progetto, e se sono tutte nuove il globale e' NUOVO —
+        # dire "fidati" quando non c'e' ancora nulla sarebbe una bugia.
+        rank = {"NUOVO": -1, "VERDE": 0, "GIALLO": 1, "ROSSO": 2}
+        peggiore = None
         for slug, path in mem.PROGETTI.items():
             try:
                 c, det = mem.semaforo_progetto(con, slug, path)
             except Exception:
                 c, det = "-", []
             sem[slug] = {"colore": c, "dettagli": det}
-            if c in rank and rank[c] > rank[peggiore]:
+            if c in rank and (peggiore is None or rank[c] > rank[peggiore]):
                 peggiore = c
-        sem["_globale"] = peggiore
+        sem["_globale"] = peggiore or "VERDE"
         _cache.update(t=time.time(), git=gitline, sem=sem)
         return gitline, sem
 
