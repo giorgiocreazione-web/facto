@@ -607,6 +607,10 @@ def _fasi(tmp):
     # ingoiati (.catch vuoto) e restavano a schermo i dati di un'altra area.
     check("offBar" in pagina and "off_brief" in pagina,
           "dashboard: c'e' l'avviso di server irraggiungibile (niente errori muti)")
+    # e deve poter SPARIRE: con un id, [hidden] perde contro #offBar{display:flex}
+    # e il banner resta a schermo col server vivo (successo davvero, su fire-lab).
+    check("#offBar[hidden]" in pagina,
+          "dashboard: l'avviso sa anche NASCONDERSI (regola [hidden] esplicita)")
     check("<html" in pagina.lower() or "<!doctype" in pagina.lower(),
           "facto dashboard serve Mission Control su /",
           "" if pagina else (derr[:100] + " · server: " + srv_out[:200].replace("\n", " | ")))
