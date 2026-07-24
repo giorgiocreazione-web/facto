@@ -1,0 +1,47 @@
+# Il database è LOCALE e ricostruibile (da git + sorgenti): non si versiona.
+# Così i diff restano puliti e non si committano mai dati per sbaglio.
+*.db
+*.db-wal
+*.db-shm
+
+# Python
+__pycache__/
+*.pyc
+
+# Dashboard statica generata dal motore (rigenerabile con: mem.py dashboard-html)
+/dashboard.html
+
+# Report generati dall'export (Markdown/HTML/PDF): artefatti locali, rigenerabili
+_report/
+
+# Temporanei locali
+*.tmp
+*.log
+.DS_Store
+Thumbs.db
+
+# Sandbox di test locale (non fa parte del prodotto)
+_sandbox/
+
+# Transcript A-Z degli agenti (osservabilita' dell'orchestratore): artefatti RUNTIME locali, un file
+# per run. Possono contenere il codice letto dall'agente. Rigenerabili a ogni lancio, non si versionano.
+/_memoria/orch/transcripts/
+/.facto/orch/transcripts/
+
+# Config ATTIVO del progetto: locale, ogni installazione ha il suo
+# (il template distribuito e' facto.config.example.json)
+/facto.config.json
+
+# Utenti della dashboard (controllo accessi): LOCALE e contiene HASH di password.
+# Non si versiona mai. Si crea con: python pro/access/access.py add <utente>
+/facto.users.json
+
+# Backup temporanei creati durante un redesign (es. index.html.bak): usa-e-getta.
+*.bak
+
+# Cache di pytest
+.pytest_cache/
+
+# Script di prova usa-e-getta (banco di lavoro, non prodotto)
+_scratch*
+/dist/

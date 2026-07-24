@@ -1,0 +1,18 @@
+{
+  "brand": "Nome-del-Gioco — Facto",
+  "root": ".",
+  "db_path": ".facto/facto.db",
+  "git": { "enabled": true, "main_branch": "main" },
+
+  "projects": {
+    "engine":   { "path": "src/engine",   "label": "Engine / Core" },
+    "gameplay": { "path": "src/gameplay", "label": "Gameplay & Meccaniche" },
+    "ui":       { "path": "src/ui",       "label": "UI / HUD / Menu" },
+    "content":  { "path": "content",      "label": "Livelli & Contenuti" },
+    "assets":   { "path": "assets",       "label": "Asset (art / audio)" }
+  },
+
+  "self_project": { "slug": "tooling", "path": "tools", "label": "Tooling & Build" },
+
+  "identity_files": ["docs/GAME_DESIGN.md", "docs/REGOLE_TEAM.md"]
+}

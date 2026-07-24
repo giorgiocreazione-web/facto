@@ -1,0 +1,17 @@
+{
+  "_readme": "Claude Code SessionStart hook for Facto. EASIEST WAY: run `facto connect claude-code` in your project — it writes this for you (and `facto connect --all` also wires MCP + git). The block below is what it produces.",
+  "_note_folder_mode": "Only if you run Facto from a folder (no pip install): use the OS-specific script command instead. Windows: powershell -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PROJECT_DIR}\\facto\\hooks\\on-session-start.ps1\"  ·  mac/linux: bash \"${CLAUDE_PROJECT_DIR}/facto/hooks/on-session-start.sh\"",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "facto claude-hook"
+          }
+        ]
+      }
+    ]
+  }
+}

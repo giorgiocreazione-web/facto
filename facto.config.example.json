@@ -1,0 +1,25 @@
+{
+  "_help": {
+    "brand": "Nome mostrato in dashboard e briefing. Mettici il nome del tuo progetto.",
+    "root": "Cartella radice del progetto, relativa a QUESTO file. '.' = stessa cartella del config.",
+    "db_path": "Dove vive il database (relativo a root). NON versionarlo (gia' nel .gitignore).",
+    "git.enabled": "true = lo stato si auto-verifica leggendo git. false = lo tieni a mano con 'add'/'handoff'.",
+    "git.main_branch": "Nome del branch principale del repo (main, master, ...).",
+    "projects": "I moduli da tracciare: slug -> { path (relativo a root), label leggibile }. Aggiungine quanti vuoi.",
+    "self_project": "Opzionale: una cartella di cui vuoi solo lo 'stato', fuori dal semaforo (es. tooling/build). null per ometterla.",
+    "identity_files": "Opzionale: file letti SEMPRE a inizio sessione (mission, regole del team). Path relativi a root."
+  },
+
+  "brand": "Il Mio Progetto",
+  "root": ".",
+  "db_path": ".facto/facto.db",
+  "git": { "enabled": true, "main_branch": "main" },
+
+  "projects": {
+    "core": { "path": "src",  "label": "Core" },
+    "web":  { "path": "web",  "label": "Frontend Web" }
+  },
+
+  "self_project": null,
+  "identity_files": []
+}
