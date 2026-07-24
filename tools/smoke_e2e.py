@@ -590,6 +590,10 @@ def _fasi(tmp):
             srv_out = (dp.communicate(timeout=5)[0] or "").strip()
         except Exception:
             srv_out = ""
+    # se il server muore, la pagina DEVE dirlo: prima i fetch falliti venivano
+    # ingoiati (.catch vuoto) e restavano a schermo i dati di un'altra area.
+    check("offBar" in pagina and "off_brief" in pagina,
+          "dashboard: c'e' l'avviso di server irraggiungibile (niente errori muti)")
     check("<html" in pagina.lower() or "<!doctype" in pagina.lower(),
           "facto dashboard serve Mission Control su /",
           "" if pagina else (derr[:100] + " · server: " + srv_out[:200].replace("\n", " | ")))
