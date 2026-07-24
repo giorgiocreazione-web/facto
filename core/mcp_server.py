@@ -103,6 +103,9 @@ CORE_TOOLS = [
      "description": "Define a project AREA (a logical module) — writes it into facto.config.json. Use during SETUP, one call per area, AFTER the human confirmed the structure. slug = short semantic name (e.g. 'factory', not '01_generatore-siti-astro'); path = the real folder (may be nested, e.g. 'code/01_thing'); label = readable name.",
      "inputSchema": _obj({"slug": {"type": "string"}, "path": {"type": "string"},
                           "label": {"type": "string"}}, ["slug", "path"])},
+    {"name": "facto_remove_area",
+     "description": "Remove an AREA from facto.config.json (e.g. a test area created by mistake). Its facts stay in history. Confirm with the human first.",
+     "inputSchema": _obj({"slug": {"type": "string"}}, ["slug"])},
 ]
 
 CRM_TOOLS = [
@@ -275,6 +278,13 @@ def t_add_area(args):
     return f"✓ area '{slug}' {verbo} -> {path} [{tot} areas total]{warn}"
 
 
+def t_remove_area(args):
+    """Rimuove un'area dal config (CLI `facto remove-area`). I fatti restano
+    nella storia. Serve all'agente per proporre «tolgo le aree di prova?»."""
+    slug, tot = mem.remove_area(args.get("slug"))
+    return f"✓ area '{slug}' removed [{tot} areas left] (its facts stay in history)"
+
+
 def t_crm_view(_):
     d = ds.build_crm()
     out = ["# CRM"]
@@ -333,7 +343,7 @@ def t_add_task(args):
 DISPATCH = {
     "facto_status": t_status, "facto_brief": t_brief, "facto_search": t_search,
     "facto_add_fact": t_add_fact, "facto_close_fact": t_close_fact, "facto_handoff": t_handoff,
-    "facto_add_area": t_add_area,
+    "facto_add_area": t_add_area, "facto_remove_area": t_remove_area,
 }
 if _crm:
     DISPATCH.update({"facto_crm": t_crm_view, "facto_add_entity": t_add_entity,

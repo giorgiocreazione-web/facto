@@ -1241,7 +1241,7 @@ function renderSearch(d){
   const rows=d.risultati||[];
   $("#qResults").innerHTML=rows.length?rows.map(f=>{
     const c=tcol(f.tipo);const stato=f.vivo?t("live_now"):t("closed_pre")+(f.valido_fino_a||"");
-    return `<div class="qrow" style="--ec:${c}"><div class="qtp">${f.tipo}</div><div class="qtx">${esc(f.testo)}</div>
+    return `<div class="qrow" style="--ec:${c}"><div class="qtp">${esc(tl(f.tipo))}</div><div class="qtx">${esc(f.testo)}</div>
       <div class="qmt"><span>${esc(f.progetto)}</span><span>${stato}</span><span>${f.valido_da||""}</span></div></div>`;
   }).join(""):`<div class="empty2">${t("q_empty_a")}${esc($("#qInput").value)}${t("q_empty_b")}</div>`;
 }

@@ -12,7 +12,30 @@ propose, never impose.
   files. Run `git log --oneline -20`.
 - Goal: understand this project's real **modules** and its **current state**.
 
-## Step 2 — Design the areas (this is the craft)
+## Step 2 — Recognise WHAT this folder is (before designing anything)
+
+People use Facto for very different things, so there is no single right layout.
+Look at what you actually found and say out loud which of these it is:
+
+- **A CONTAINER of projects** — an agency folder, a workspace, a monorepo of
+  separate products (`clients/`, `apps/`, `01_thing/ 02_other/`). Each project
+  is independent: different stack, different goal, own history.
+  → **one area per project** (`astro`, `bridge`, `crm`), and the memory becomes
+  the switchboard across all of them.
+- **A SINGLE project** — one product, one goal, made of parts that only make
+  sense together (`engine/ ui/ audio/`, `api/ web/ db/`).
+  → **one area per module** (`engine`, `ui`, `audio`).
+- **Neither, yet** — a nearly empty folder, or a project with no real structure.
+  → don't invent areas. Ask the human what they are about to build, and start
+  with one or two areas that match their answer (even a single `main` is fine —
+  areas can be added later with `facto_add_area`, or removed with
+  `facto_remove_area`).
+
+Tell the human which case you think it is **and why**, in one line, before you
+propose the areas: *"This looks like a container of separate projects — I'd make
+one area per project. Agree?"* If they say it's the other case, they are right.
+
+## Step 3 — Design the areas (this is the craft)
 An **area** is a logical module of the project — the unit you'd brief a teammate
 on: *what* the work is about (engine, ui, payments, strategy). What makes areas
 *good* (this is exactly how an expert owner would do it):
@@ -41,17 +64,17 @@ global handoff, a project-wide decision) go into the **`globale`** area — neve
 into a per-type area. If you catch yourself proposing an area whose name is a
 *document type*, stop: that's a fact type, not a module.
 
-## Step 3 — Propose and get confirmation (MANDATORY)
+## Step 4 — Propose and get confirmation (MANDATORY)
 Show the human a short table: **slug · path · one line of what it is**. Ask:
 *"Do these areas match how you think of the project? Rename / merge / drop
 anything?"* **Wait for an explicit yes. Do not proceed without it.** They own the
 project — the names must be theirs.
 
-## Step 4 — Write the structure
+## Step 5 — Write the structure
 For each confirmed area call the MCP tool **`facto_add_area(slug, path, label)`**.
 It writes the area into `facto.config.json` (validated). Do them one by one.
 
-## Step 5 — Seed the memory (from the docs, not just from git)
+## Step 6 — Seed the memory (from the docs, not just from git)
 For each area, register the facts that are **true now**, reading the project's own
 documents — this is what stops the memory from being "blind" on day one:
 - the **goal** of the area → `facto_add_fact(area, type="obiettivo", text=…)`
@@ -61,7 +84,7 @@ documents — this is what stops the memory from being "blind" on day one:
 Keep each fact short, one idea, dated. Then, for each active area, leave a
 `facto_handoff(area, text=…)` with where things stand right now.
 
-## Step 6 — Verify and hand over
+## Step 7 — Verify and hand over
 Call `facto_status` and `facto_brief` on one area. Confirm the memory reflects
 reality. Tell the human it's ready, and that from now on every session opens with
 this briefing. Point them to the day-to-day rules (the daily playbook).

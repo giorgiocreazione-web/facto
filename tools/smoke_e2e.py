@@ -412,6 +412,15 @@ def _fasi(tmp):
     rc, out, _ = sh([FACTO, "status"], cwd=proj, env=env)
     check(rc == 0 and "SHELL" in out and "NO MEMORY YET" not in out,
           "il semaforo vede l'area creata da shell")
+    # remove-area: chi prova lo strumento crea aree per sbaglio al primo giro e
+    # deve poterle togliere senza editare il JSON a mano (segnalato dal collaudo).
+    rc, out, _ = sh([FACTO, "add-area", "usaegetta", "src"], cwd=proj, env=env)
+    rc, out, _ = sh([FACTO, "remove-area", "usaegetta"], cwd=proj, env=env)
+    check(rc == 0 and "usaegetta" in out and "removed" in out,
+          "facto remove-area: si toglie un'area creata per sbaglio", out.strip()[:60])
+    rc, out, _ = sh([FACTO, "remove-area", "mai-esistita"], cwd=proj, env=env)
+    check("no area" in out.lower() or "nessuna area" in out.lower(),
+          "remove-area: errore gentile se il nome non esiste", out.strip()[:60])
 
 
     # --- fase 5: MCP — handshake e round-trip di scrittura --------------------
@@ -447,8 +456,12 @@ def _fasi(tmp):
         ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
     except Exception:
         ctx = ""
-    check(rc == 0 and "Keep the memory alive" in ctx and "first-run onboarding" not in ctx,
-          "claude-hook ramo daily (brief + reminder)", (ctx[:80] + "…") if ctx else out[:120])
+    # il reminder daily deve ORDINARE all'agente di orientare l'umano e proporre
+    # i prossimi passi: senza, descrive lo stato e si ferma (difetto del collaudo).
+    check(rc == 0 and "[Facto]" in ctx and "first-run onboarding" not in ctx
+          and ("PROPOSE" in ctx or "ORIENT" in ctx),
+          "claude-hook ramo daily: brief + istruzione di orientare/proporre",
+          (ctx[ctx.find("[Facto]"):][:90] + "…") if "[Facto]" in ctx else out[:120])
 
     # --- fase 7: la CLI del ciclo quotidiano ----------------------------------
     rc, out, _ = sh([FACTO, "add", "app", "decisione", "smoke: decisione di prova"], cwd=proj, env=env)

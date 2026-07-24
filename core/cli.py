@@ -123,6 +123,8 @@ def _help():
             "SCRITTURA (il tuo agente lo fa da solo via MCP)"))
     print(T('  facto add-area <slug> <path>        declare an area of the project',
             '  facto add-area <slug> <percorso>    dichiara un\'area del progetto'))
+    print(T('  facto remove-area <slug>            remove an area (facts kept in history)',
+            '  facto remove-area <slug>            rimuovi un\'area (i fatti restano nella storia)'))
     print(T('  facto add <area> <type> "<text>"    record a dated fact',
             '  facto add <area> <tipo> "<testo>"   registra un fatto datato'))
     print(T('  facto close <area> <type> --like    close what is no longer true',
@@ -200,10 +202,24 @@ def _setup_context():
     return head + (pb or "Explore the project, propose areas, call facto_add_area "
                    "for each after the human confirms, then seed facts from the docs.")
 
-def _daily_reminder():
-    """Promemoria compatto a ogni sessione di lavoro (il playbook daily condensato;
-    il file completo resta per approfondire)."""
-    return ("[Facto] Keep the memory alive as you work: facto_add_fact for "
+def _daily_reminder(vergine=False):
+    """Promemoria a ogni sessione di lavoro. La prima parte è la più importante:
+    dice all'agente di ORIENTARE l'umano e PROPORRE i prossimi passi. Senza,
+    l'agente descrive lo stato e si ferma lì — con l'umano che deve chiedere
+    «e adesso?» (segnalato dal collaudo: il difetto era proprio questo).
+    `vergine`: il progetto ha le aree ma non ancora lavoro registrato."""
+    if vergine:
+        apertura = ("[Facto] This project is NEW to Facto — the memory is still "
+                    "essentially empty. Your first job this session: explore the "
+                    "project, then PROPOSE to the human how to begin — which areas "
+                    "make sense, what to record first. Ask what they want to work "
+                    "on. Don't just summarise files: take the initiative.")
+    else:
+        apertura = ("[Facto] You received this project's state above. Before diving "
+                    "in, ORIENT the human: in a line or two, where things stood and "
+                    "what the last handoff said, then PROPOSE the next steps. Don't "
+                    "just describe — point somewhere.")
+    return (apertura + " As you work, keep the memory true: facto_add_fact for "
             "decisions/bugs/state, facto_close_fact when something changes, "
             "facto_handoff at session end. Trust light: facto_status.")
 
@@ -636,17 +652,27 @@ def _cmd_claude_hook():
         # TUTTO dentro la redirezione, IMPORT COMPRESO: su stdout deve uscire SOLO
         # il JSON del protocollo hook — mai il testo d'aiuto del motore senza config.
         setup_mode = False
+        vergine = False
         with contextlib.redirect_stdout(buf):
             mem = _import_mem()
             con = mem.db()
             setup_mode = not mem.PROGETTI              # progetto NON ancora strutturato
             if not setup_mode:
+                # Aree sì, ma lavoro registrato? I fatti 'git' non contano: li
+                # scrive Facto da solo, non raccontano nulla di ciò che è stato
+                # deciso o fatto. Zero fatti veri = progetto appena nato.
+                try:
+                    vergine = con.execute(
+                        "SELECT COUNT(*) FROM fatti WHERE tipo!='git'"
+                        " AND valido_fino_a IS NULL").fetchone()[0] == 0
+                except Exception:
+                    vergine = False
                 mem.cmd_session_start(con, argparse.Namespace(cwd=cwd))
             con.close()
         if setup_mode:
             testo = _setup_context()                   # onboarding: l'agente costruisce la memoria
         else:
-            testo = (buf.getvalue().strip() + "\n\n" + _daily_reminder()).strip()
+            testo = (buf.getvalue().strip() + "\n\n" + _daily_reminder(vergine)).strip()
         _auto_snapshot(mem)
     except BaseException as e:                 # anche SystemExit del motore senza config
         testo = ("⚠ Facto: memory engine unavailable (%s). The session is starting BLIND: "

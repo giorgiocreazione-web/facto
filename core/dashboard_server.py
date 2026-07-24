@@ -353,7 +353,8 @@ def w_fatto(d):
     mem.add_fatto(con, d["progetto"].strip(), d["tipo"].strip(), d["contenuto"].strip(),
                   (d.get("valido_da") or mem.today()), "dashboard")
     con.close()
-    return {"msg": f"fatto «{d['tipo'].strip()}» aggiunto a {d['progetto'].strip()}"}
+    return {"msg": mem.T(f"fact «{d['tipo'].strip()}» added to {d['progetto'].strip()}",
+                        f"fatto «{d['tipo'].strip()}» aggiunto a {d['progetto'].strip()}")}
 
 def w_fatto_close(d):
     _need(d, "progetto", "tipo")
@@ -366,14 +367,16 @@ def w_fatto_close(d):
     for i in ids:
         con.execute("UPDATE fatti SET valido_fino_a=?, chiuso_il=? WHERE id=?", (mem.today(), mem.now(), i))
     con.commit(); con.close()
-    return {"msg": f"{len(ids)} fatto/i chiuso/i (restano nella storia)"}
+    return {"msg": mem.T(f"{len(ids)} fact(s) closed (kept in history)",
+                        f"{len(ids)} fatto/i chiuso/i (restano nella storia)")}
 
 def w_handoff(d):
     _need(d, "progetto", "testo")
     con = _rw()
     mem.upsert_singleton(con, d["progetto"].strip(), "handoff", d["testo"].strip(), mem.today(), "dashboard")
     con.close()
-    return {"msg": f"handoff aggiornato per {d['progetto'].strip()}"}
+    return {"msg": mem.T(f"handoff updated for {d['progetto'].strip()}",
+                        f"handoff aggiornato per {d['progetto'].strip()}")}
 
 def w_entita(d):
     _crm_serve(); _need(d, "tipo", "nome")
@@ -382,14 +385,15 @@ def w_entita(d):
     cur = con.execute("INSERT INTO entita(tipo,nome,note,creato_il) VALUES(?,?,?,?)",
                       (d["tipo"].strip(), d["nome"].strip(), note, mem.now()))
     con.commit(); rid = cur.lastrowid; con.close()
-    return {"msg": f"entità «{d['nome'].strip()}» creata", "id": rid}
+    return {"msg": mem.T(f"entity «{d['nome'].strip()}» created",
+                        f"entità «{d['nome'].strip()}» creata"), "id": rid}
 
 def w_entita_close(d):
     _crm_serve(); _need(d, "id")
     con = _rw()
     con.execute("UPDATE entita SET chiuso_il=? WHERE id=?", (mem.now(), int(d["id"])))
     con.commit(); con.close()
-    return {"msg": f"entità #{int(d['id'])} archiviata"}
+    return {"msg": mem.T(f"entity #{int(d['id'])} archived", f"entità #{int(d['id'])} archiviata")}
 
 def w_task(d):
     _crm_serve(); _need(d, "progetto", "titolo")
@@ -400,7 +404,8 @@ def w_task(d):
     cur = con.execute("INSERT INTO task(progetto,titolo,stato,assegnatario,scadenza,priorita,creato_il) VALUES(?,?,?,?,?,?,?)",
                       (d["progetto"].strip(), d["titolo"].strip(), "todo", per, scad, pri, mem.now()))
     con.commit(); rid = cur.lastrowid; con.close()
-    return {"msg": f"task «{d['titolo'].strip()}» creato", "id": rid}
+    return {"msg": mem.T(f"task «{d['titolo'].strip()}» created",
+                        f"task «{d['titolo'].strip()}» creato"), "id": rid}
 
 def w_task_stato(d):
     _crm_serve(); _need(d, "id", "stato")
@@ -419,7 +424,7 @@ def w_rel(d):
     con.execute("INSERT INTO relazioni(da_tipo,da_id,rel,a_tipo,a_id,creato_il) VALUES(?,?,?,?,?,?)",
                 (d["da_tipo"].strip(), int(d["da_id"]), d["rel"].strip(), d["a_tipo"].strip(), int(d["a_id"]), mem.now()))
     con.commit(); con.close()
-    return {"msg": "relazione creata"}
+    return {"msg": mem.T("relation created", "relazione creata")}
 
 def _backup_serve():
     if _backup is None:
@@ -430,7 +435,8 @@ def w_backup_create(d):
     r = _backup.take_snapshot()
     if not r.get("ok"):
         raise ValueError(r.get("errore", "snapshot fallito"))
-    return {"msg": f"snapshot creato: {r['name']} ({r.get('size_human','')})", **r}
+    return {"msg": mem.T(f"snapshot created: {r['name']} ({r.get('size_human','')})",
+                        f"snapshot creato: {r['name']} ({r.get('size_human','')})"), **r}
 
 def w_backup_restore(d):
     """Ripristino: distruttivo. Conferma OBBLIGATORIA lato server (non bypassabile via fetch),
@@ -449,7 +455,8 @@ def w_backup_restore(d):
     _cache.update(t=0.0)             # invalida le cache: il DB e' cambiato sotto i piedi
     _notify_cache.update(t=0.0, data=None)
     safety = (" · stato precedente salvato in %s" % r["safety"]) if r.get("safety") else ""
-    return {"msg": f"ripristinato da {r['restored_from']}{safety}", **r}
+    return {"msg": mem.T(f"restored from {r['restored_from']}{safety}",
+                        f"ripristinato da {r['restored_from']}{safety}"), **r}
 
 def w_ingest_git(d):
     """Riallinea la memoria al repo reale — è l'ingest-git del core, dal browser.
@@ -458,7 +465,7 @@ def w_ingest_git(d):
     mem.do_ingest_git(con, verbose=False)
     con.close()
     _cache.update(t=0.0)                 # il prossimo /api/state legge lo stato fresco
-    return {"msg": "memoria riallineata a git"}
+    return {"msg": mem.T("memory realigned to git", "memoria riallineata a git")}
 
 _WRITE = {"fatto": w_fatto, "fatto-close": w_fatto_close, "handoff": w_handoff,
           "entita": w_entita, "entita-close": w_entita_close,

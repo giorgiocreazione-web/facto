@@ -827,6 +827,42 @@ def cmd_add_area(con, args):
                 "  (nota: quella cartella non esiste ancora)"))
 
 
+def remove_area(slug):
+    """Toglie un'area dal config. UNICA implementazione (CLI + tool MCP). Chi
+    prova lo strumento crea aree di prova al primo giro e deve poterle togliere
+    senza editare il JSON a mano. I FATTI restano nel DB (bi-temporale: non si
+    cancella), l'area sparisce solo dalla vista — restano cercabili con query."""
+    slug = (slug or "").strip().lower()
+    cfg_path = CFG.get("_path")
+    if not cfg_path or not os.path.isfile(cfg_path):
+        raise ValueError(T("no facto.config.json here", "nessun facto.config.json qui"))
+    with open(cfg_path, encoding="utf-8-sig") as fh:
+        cfg = json.load(fh)
+    prj = cfg.get("projects", {})
+    if slug not in prj:
+        raise ValueError(T(f"no area '{slug}' (have: {', '.join(prj) or 'none'})",
+                           f"nessuna area '{slug}' (ci sono: {', '.join(prj) or 'nessuna'})"))
+    del prj[slug]
+    with open(cfg_path, "w", encoding="utf-8", newline="\n") as fh:
+        json.dump(cfg, fh, ensure_ascii=False, indent=2)
+    return slug, len(prj)
+
+
+def cmd_remove_area(con, args):
+    n_fatti = con.execute("SELECT COUNT(*) FROM fatti WHERE progetto=? AND valido_fino_a IS NULL",
+                          (args.slug.strip().lower(),)).fetchone()[0]
+    try:
+        slug, tot = remove_area(args.slug)
+    except ValueError as e:
+        print(f"  {e}")
+        return
+    print(T(f"✓ area '{slug}' removed  [{tot} area(s) left]",
+            f"✓ area '{slug}' rimossa  [restano {tot} aree]"))
+    if n_fatti:
+        print(T(f"  ({n_fatti} fact(s) kept in history — find them with `facto query`)",
+                f"  ({n_fatti} fatto/i restano nella storia — cercali con `facto query`)"))
+
+
 def main():
     ap = argparse.ArgumentParser(prog="facto")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -845,14 +881,15 @@ def main():
     p.add_argument("--da"); p.add_argument("--fonte")
     p = sub.add_parser("add-area"); p.add_argument("slug"); p.add_argument("path")
     p.add_argument("--label")
+    p = sub.add_parser("remove-area"); p.add_argument("slug")
     args = ap.parse_args()
     if args.cmd == "doctor":          # gira anche se il DB/FTS5 è problematico: è il suo scopo
         return cmd_doctor(args)
     con = db()
     {"ingest-git": cmd_ingest_git, "brief": cmd_brief, "dashboard": cmd_dashboard,
      "session-start": cmd_session_start, "query": cmd_query, "add": cmd_add,
-     "add-area": cmd_add_area, "health": cmd_health, "close": cmd_close,
-     "dashboard-html": cmd_dashboard_html, "handoff": cmd_handoff}[args.cmd](con, args)
+     "add-area": cmd_add_area, "remove-area": cmd_remove_area, "health": cmd_health,
+     "close": cmd_close, "dashboard-html": cmd_dashboard_html, "handoff": cmd_handoff}[args.cmd](con, args)
     con.close()
 
 if __name__ == "__main__":
