@@ -1,0 +1,68 @@
+# Facto — packaging del prodotto Free (core).
+#
+# A COSA SERVE: rende il repo installabile direttamente da git —
+#   uv tool install git+https://github.com/giorgiocreazione-web/facto.git
+# Senza questo file dentro al pacchetto pubblico, pip risponde «does not appear
+# to be a Python project» e il comando promesso dal README non funziona.
+# (E' successo davvero: il repo e' stato pubblicato senza, e non si installava.)
+#
+# NOME: "facto" secco e' occupato su PyPI da un pacchetto altrui (2016), quindi
+# la DISTRIBUZIONE si chiama `facto-memory` — e dice pure cosa fa. Il package
+# importabile e il comando quotidiano restano `facto`: l'etichetta lunga la
+# vedi una volta sola, all'installazione.
+#
+# BUILD senza rete: la wheel si genera anche con lo strumento di casa, in
+# stdlib pura —  python tools/build_wheel.py
+#
+# ZERO DIPENDENZE: `dependencies` e' vuoto per scelta, ed e' una promessa del
+# prodotto. Setuptools qui sotto serve solo a COSTRUIRE, non a far girare.
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "facto-memory"
+version = "1.1.0"                 # allineato a VERSION dal processo di release
+description = "Project memory for AI agents that knows when it's wrong — dated facts, verified against git. Local, zero dependencies."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Giorgio Cristea" }]
+keywords = [
+    "ai", "ai-agents", "llm", "memory", "mcp", "model-context-protocol",
+    "claude", "cursor", "copilot", "cli", "local-first", "sqlite",
+    "developer-tools",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Documentation",
+    "Topic :: Utilities",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/giorgiocreazione-web/facto"
+Repository = "https://github.com/giorgiocreazione-web/facto"
+Issues = "https://github.com/giorgiocreazione-web/facto/issues"
+Changelog = "https://github.com/giorgiocreazione-web/facto/releases"
+
+[project.scripts]
+facto = "facto.cli:main"
+
+[tool.setuptools]
+package-dir = { facto = "core" }
+packages = ["facto"]
+
+[tool.setuptools.package-data]
+facto = ["*.html", "*.md", "*.ico", "playbooks/*.md"]
