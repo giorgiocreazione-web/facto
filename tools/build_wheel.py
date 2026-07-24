@@ -58,10 +58,20 @@ def build(out_dir):
                 files.append((full, f"facto/{rel}"))
 
     # La pagina PyPI del pacchetto E' il README: entra qui come long_description.
-    # Se manca, meglio accorgersene ora che scoprire una pagina vuota pubblicata.
-    readme_path = os.path.join(ROOT, "README.free.md")
-    with open(readme_path, encoding="utf-8") as fh:
-        long_desc = fh.read()
+    # Due contesti diversi, stesso builder: nel monorepo di sviluppo il README del
+    # free si chiama README.free.md (README.md e' quello completo free+pro), nel
+    # pacchetto PUBBLICO e' gia' stato rinominato README.md. Si prova in
+    # quest'ordine, altrimenti la CI del repo pubblico muore su un file che li'
+    # non esiste (successo davvero, 36 secondi dopo la pubblicazione).
+    long_desc = ""
+    for nome in ("README.free.md", "README.md"):
+        p = os.path.join(ROOT, nome)
+        if os.path.isfile(p):
+            with open(p, encoding="utf-8") as fh:
+                long_desc = fh.read()
+            break
+    if not long_desc:
+        raise SystemExit("nessun README trovato: la pagina PyPI sarebbe vuota")
 
     metadata = "\n".join([
         "Metadata-Version: 2.1",
