@@ -23,7 +23,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "facto-memory"
-version = "1.1.0"                 # allineato a VERSION dal processo di release
+version = "0.1.0"                 # allineato a VERSION dal processo di release
 description = "Project memory for AI agents that knows when it's wrong — dated facts, verified against git. Local, zero dependencies."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -55,7 +55,7 @@ dependencies = []
 Homepage = "https://github.com/giorgiocreazione-web/facto"
 Repository = "https://github.com/giorgiocreazione-web/facto"
 Issues = "https://github.com/giorgiocreazione-web/facto/issues"
-Changelog = "https://github.com/giorgiocreazione-web/facto/releases"
+Changelog = "https://github.com/giorgiocreazione-web/facto/blob/main/CHANGELOG.md"
 
 [project.scripts]
 facto = "facto.cli:main"

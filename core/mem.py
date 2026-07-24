@@ -286,6 +286,14 @@ def upsert_singleton(con, progetto, tipo, contenuto, valido_da, fonte):
     add_fatto(con, progetto, tipo, contenuto, valido_da, fonte)
     return "aggiornato" if cur else "nuovo"
 
+def esito_t(esito):
+    """Gli esiti di upsert_singleton sono CHIAVI interne (stringhe italiane, stabili);
+    alla STAMPA si traducono — altrimenti l'utente EN legge '(nuovo)' nel mezzo
+    di una riga inglese (visto al collaudo del 24 lug)."""
+    return {"aggiornato": T("updated", "aggiornato"),
+            "nuovo":      T("new", "nuovo"),
+            "invariato":  T("unchanged", "invariato")}.get(esito, esito)
+
 def do_ingest_git(con, verbose=True):
     if not GIT_ON:
         if verbose:
@@ -311,7 +319,7 @@ def do_ingest_git(con, verbose=True):
                                  T(f"last work {d} ({h}, branch {br}): {subj}{flag}",
                                    f"ultimo lavoro {d} ({h}, branch {br}): {subj}{flag}"), d, f"git:{h}")
         if verbose:
-            print(f"  {slug}: {d} {h} [{br}]  ({esito})")
+            print(f"  {slug}: {d} {h} [{br}]  ({esito_t(esito)})")
     # self_project (opzionale): una cartella di cui vuoi lo "stato" ma fuori da semaforo/dashboard.
     if SELF and SELF.get("path"):
         out = git("log", "--branches", "--tags", "-1", "--date=short", "--format=%ad|%h|%s", "--", SELF["path"])
@@ -322,7 +330,7 @@ def do_ingest_git(con, verbose=True):
                                      T(f"last work on {label} {d} ({h}): {subj}",
                                        f"ultimo lavoro su {label} {d} ({h}): {subj}"), d, f"git:{h}")
             if verbose:
-                print(f"  {SELF.get('slug','self')}: {d} {h}  ({esito})")
+                print(f"  {SELF.get('slug','self')}: {d} {h}  ({esito_t(esito)})")
     if verbose:
         print(T("ingest-git: done.", "ingest-git: fatto."))
 
@@ -722,8 +730,8 @@ def cmd_handoff(con, args):
         print(T("empty handoff, skipped", "handoff vuoto, skip")); return
     esito = upsert_singleton(con, args.progetto, "handoff", testo, today(),
                              args.fonte or T("session", "sessione"))
-    print(T(f"handoff saved [{args.progetto}] ({esito}, {len(testo)} chars)",
-            f"handoff salvato [{args.progetto}] ({esito}, {len(testo)} char)"))
+    print(T(f"handoff saved [{args.progetto}] ({esito_t(esito)}, {len(testo)} chars)",
+            f"handoff salvato [{args.progetto}] ({esito_t(esito)}, {len(testo)} char)"))
 
 def cmd_doctor(args):
     """Controlla DA SOLO che sia tutto a posto: prerequisiti, config, percorsi, DB.

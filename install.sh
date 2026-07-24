@@ -40,10 +40,14 @@ if [ -z "$WHEEL" ]; then
 fi
 if [ -n "$WHEEL" ] && [ -f "$WHEEL" ]; then
   SORGENTE="$WHEEL"
+  FALLBACK=""
   step "$(t 'source: ' 'sorgente: ')$(basename "$WHEEL")"
 else
-  SORGENTE="git+https://github.com/giorgiocreazione-web/facto.git"
-  step "$(t 'source: GitHub' 'sorgente: GitHub')"
+  # Via primaria: il pacchetto PyPI (release verificate). Se PyPI non risponde
+  # (rete filtrata, mirror rotto) si ripiega sull'install diretta da GitHub.
+  SORGENTE="facto-memory"
+  FALLBACK="git+https://github.com/giorgiocreazione-web/facto.git"
+  step "$(t 'source: PyPI (facto-memory)' 'sorgente: PyPI (facto-memory)')"
 fi
 
 # ---------------------------------------------------------------- installa
@@ -71,11 +75,21 @@ if [ -z "$VIA" ]; then
 fi
 
 step "$(t 'installing with ' 'installo con ')$VIA..."
-case "$VIA" in
-  uv)   uv tool install --force "$SORGENTE" >/dev/null 2>&1 || { bad "$(t 'installation failed' 'installazione fallita')"; exit 1; } ;;
-  pipx) pipx install --force "$SORGENTE"    >/dev/null 2>&1 || { bad "$(t 'installation failed' 'installazione fallita')"; exit 1; } ;;
-  pip)  python3 -m pip install --user --upgrade --quiet "$SORGENTE" || { bad "$(t 'installation failed' 'installazione fallita')"; exit 1; } ;;
-esac
+installa() {
+  case "$VIA" in
+    uv)   uv tool install --force "$1" >/dev/null 2>&1 ;;
+    pipx) pipx install --force "$1"    >/dev/null 2>&1 ;;
+    pip)  python3 -m pip install --user --upgrade --quiet "$1" ;;
+  esac
+}
+if ! installa "$SORGENTE"; then
+  if [ -n "$FALLBACK" ]; then
+    step "$(t 'PyPI unreachable, retrying from GitHub...' 'PyPI non raggiungibile, riprovo da GitHub...')"
+    installa "$FALLBACK" || { bad "$(t 'installation failed' 'installazione fallita')"; exit 1; }
+  else
+    bad "$(t 'installation failed' 'installazione fallita')"; exit 1
+  fi
+fi
 
 # ---------------------------------------------------------------- verifica
 # uv e pip --user mettono i comandi in ~/.local/bin: se questa shell non ce

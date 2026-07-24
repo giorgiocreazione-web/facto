@@ -45,8 +45,11 @@ if ($Wheel) {
     $sorgente = $Wheel
     Step ((T "source: " "sorgente: ") + (Split-Path $Wheel -Leaf))
 } else {
-    $sorgente = "git+https://github.com/giorgiocreazione-web/facto.git"
-    Step (T "source: GitHub" "sorgente: GitHub")
+    # Via primaria: il pacchetto PyPI (release verificate). Se PyPI non risponde
+    # (rete filtrata, mirror rotto) si ripiega sull'install diretta da GitHub.
+    $sorgente = "facto-memory"
+    $fallback = "git+https://github.com/giorgiocreazione-web/facto.git"
+    Step (T "source: PyPI (facto-memory)" "sorgente: PyPI (facto-memory)")
 }
 
 # ---------------------------------------------------------------- installa
@@ -80,12 +83,19 @@ Step ((T "installing with " "installo con ") + "$via...")
 # e' andata bene (uv scrive il suo resoconto proprio li'). Si guarda il codice
 # di uscita, non lo stderr.
 $ErrorActionPreference = "Continue"
-$log = switch ($via) {
-    "uv"   { & uv tool install --force $sorgente 2>&1 | Out-String }
-    "pipx" { & pipx install --force $sorgente 2>&1 | Out-String }
-    "pip"  { & python -m pip install --user --upgrade --quiet $sorgente 2>&1 | Out-String }
+function Installa($src) {
+    $script:log = switch ($via) {
+        "uv"   { & uv tool install --force $src 2>&1 | Out-String }
+        "pipx" { & pipx install --force $src 2>&1 | Out-String }
+        "pip"  { & python -m pip install --user --upgrade --quiet $src 2>&1 | Out-String }
+    }
+    return $LASTEXITCODE
 }
-$rc = $LASTEXITCODE
+$rc = Installa $sorgente
+if ($rc -ne 0 -and $fallback) {
+    Step (T "PyPI unreachable, retrying from GitHub..." "PyPI non raggiungibile, riprovo da GitHub...")
+    $rc = Installa $fallback
+}
 $ErrorActionPreference = "Stop"
 if ($rc -ne 0) {
     Bad ((T "installation failed (exit code " "installazione fallita (codice ") + "$rc)")

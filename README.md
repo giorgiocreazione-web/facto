@@ -1,6 +1,6 @@
 # Facto
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/giorgiocreazione-web/facto/blob/main/LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![Dependencies: none](https://img.shields.io/badge/dependencies-none-brightgreen.svg)](#local-by-design)
 [![smoke](https://github.com/giorgiocreazione-web/facto/actions/workflows/smoke.yml/badge.svg)](https://github.com/giorgiocreazione-web/facto/actions/workflows/smoke.yml)
@@ -13,9 +13,15 @@ facts** that knows what is true *now*, **checks itself against your git repo**,
 and feeds every agent session automatically — Claude Code, Cursor, Copilot,
 Codex, Gemini, or whatever you use next.
 
-![The live dashboard: every dot is a fact, grouped around its area.](docs/dashboard.png)
+![Mission Control — every dot is a fact, grouped around its area.](https://raw.githubusercontent.com/giorgiocreazione-web/facto/main/docs/mission-control.png)
 
 ## Quickstart
+
+```bash
+uv tool install facto-memory        # or: pipx install facto-memory / pip install facto-memory
+```
+
+No `uv`? One line installs everything, even on a machine with no Python at all:
 
 **macOS · Linux**
 
@@ -29,8 +35,7 @@ curl -LsSf https://raw.githubusercontent.com/giorgiocreazione-web/facto/main/ins
 irm https://raw.githubusercontent.com/giorgiocreazione-web/facto/main/install.ps1 | iex
 ```
 
-One line. It picks the best installer you already have (uv, pipx or pip) and
-gets uv for you if you have none — no Python required beforehand. Then:
+Then wire your project:
 
 ```bash
 cd your-project
@@ -38,7 +43,7 @@ facto connect --all   # Claude Code hook + MCP + git + AGENTS.md — and any edi
 facto dashboard       # Mission Control opens in your browser by itself
 ```
 
-Then open your agent (`claude`, `cursor`, …) in the same folder. On first run it
+Now open your agent (`claude`, `cursor`, …) in the same folder. On first run it
 receives the guided-setup playbook, explores the project, **proposes the areas
 to you**, and builds the memory once you confirm — no blind auto-detection.
 
@@ -48,9 +53,7 @@ memory through MCP on its own. If the engine ever breaks, the session is *told*
 it is starting blind — no silent failures.
 
 Requires git. Works offline. `facto --help` for everything.
-*(Prefer doing it yourself? `uv tool install git+https://github.com/giorgiocreazione-web/facto.git`
-— `pipx` and `pip` work the same way. If the `facto` command isn't found
-afterwards, `python -m facto …` always works.)*
+*(If the `facto` command isn't found afterwards, `python -m facto …` always works.)*
 
 ## Why a trust light
 
@@ -58,14 +61,14 @@ Every memory tool can tell you what it stored. None of them can tell you
 **whether to believe it** — and stale memory is worse than no memory, because
 your agent acts on it with confidence.
 
-Facto compares what it remembers against the real state of your git repo and
-says so out loud:
+Facto compares what it remembers against the real state of your git repo at
+every start, and says so out loud:
 
 ```
-================  TRUST LIGHT  ================  (2026-07-24 10:55)
+================  TRUST LIGHT  ================  (2026-07-24 19:28)
   [GREEN ] ENGINE    · aligned
-  [YELLOW] UI        · memory 6 commits behind git
-  [RED   ] CONTENT   · no status recorded, 2 facts possibly outdated by the code
+  [YELLOW] UI        · memory 2 commits behind git
+  [RED   ] CONTENT   · no status recorded, 4 facts possibly outdated by the code
   ----
   GLOBAL: RED   (GREEN=trust it · YELLOW=verify · RED=refresh/do not trust)
 ```
@@ -73,6 +76,24 @@ says so out loud:
 A memory that can say *"don't trust me"* is the only kind you can trust.
 
 ## How it works
+
+```mermaid
+flowchart LR
+    A["Your AI agent<br/>Claude Code · Cursor · Codex · Gemini · …"]
+    subgraph P["Your project — 100% local, zero network calls"]
+        direction LR
+        E["Facto engine<br/>dated facts, bi-temporal"]
+        DB[(".facto/facto.db<br/>SQLite, WAL")]
+        G["your git repo"]
+        T{{"TRUST LIGHT<br/>green · yellow · red"}}
+        E --> DB
+        DB --> T
+        G -->|"compared at every start"| T
+    end
+    A -->|"writes facts via MCP<br/>as decisions happen"| E
+    T -->|"briefing injected<br/>at session start"| A
+    DB --> M["Mission Control<br/>dashboard in your browser"]
+```
 
 - **Facts, not chat.** Short, dated, typed entries — *"Decision: Tailwind v4,
   Bootstrap rejected — 2026-06-19"*. A thousand facts stay searchable in
@@ -86,6 +107,98 @@ A memory that can say *"don't trust me"* is the only kind you can trust.
   project. Pure Python standard library — **zero dependencies, no accounts, no
   telemetry**. The engine makes zero network calls, and the code is right here
   for you to check.
+
+## Your first 10 minutes
+
+A real walkthrough on a fresh project — every output below is the actual
+command output.
+
+**1 · Wire the project** *(once)*
+
+```console
+$ cd starforge && facto connect --all
+prepared facto.config.json (empty — the agent designs the areas on first run)
+connecting (claude-code):
+  [ OK ] claude-code: hook added in .claude\settings.json
+
+NEXT — open your AI agent in this folder (claude, cursor, …):
+  it gets the setup playbook, explores the project, proposes the areas,
+  and builds the memory once you confirm. Prefer by hand? `facto add-area <slug> <path>`
+```
+
+**2 · Open your agent — or build the memory by hand.** The agent proposes the
+areas on first run; doing it yourself is two commands:
+
+```console
+$ facto add-area engine engine --label "Engine (ECS)"
+✓ area 'engine' added -> engine  [1 area(s) total]
+
+$ facto add engine decisione "ECS over inheritance - profiled 4x faster with 10k asteroids"
++ [engine/decisione] valid_from=2026-07-24  ->  Compass: «DECISIONS / CONSTRAINTS»
+```
+
+**3 · Ask the light if the memory can be trusted:**
+
+```console
+$ facto status
+================  TRUST LIGHT  ================  (2026-07-24 19:28)
+  [YELLOW] ENGINE    · state not yet anchored to git — run `facto ingest-git`
+  ...
+```
+
+It even tells you how to fix it:
+
+```console
+$ facto ingest-git
+  engine: 2026-07-24 05547a8 [master]  (updated)
+ingest-git: done.
+
+$ facto status
+  [GREEN ] ENGINE    · aligned
+```
+
+**4 · Close the session with a baton for the next one:**
+
+```console
+$ facto handoff engine
+handoff saved [engine] (new, 171 chars)
+```
+
+**5 · Tomorrow, the briefing opens the session by itself** — this is what your
+agent (and `facto brief engine`) gets before writing a single line:
+
+```console
+================  ENGINE  ================  (state at 2026-07-24 19:29)
+  REAL GIT  >  active branch: master
+  -------- WHERE WE ARE NOW --------
+  - Spatial hash landed: 10k entities at 62 fps on the min-spec laptop
+  -------- LAST HANDOFF — end-of-session baton --------
+  - Vertical slice on track. Next: navmesh rework (gameplay), then wire mining
+    tiers to the HUD heat gauge. Watch out: the collision fix still needs its
+    regression test in CI.
+  -------- DECISIONS / CONSTRAINTS --------
+  - ECS over inheritance for entities - profiled 4x faster with 10k asteroids
+```
+
+Zero re-explaining. Every session starts further ahead.
+
+## The dashboard
+
+`facto dashboard` serves **Mission Control** locally. The reactor answers the
+only question that matters — *can I trust this memory right now?* — then shows
+where you are, the next step, and the blockers. It fills itself with the facts
+your agent writes, and updates live while you work.
+
+![Overview — the reactor, where we are, next step, blockers.](https://raw.githubusercontent.com/giorgiocreazione-web/facto/main/docs/overview.png)
+
+And when you don't feel like opening a terminal, **Compose** writes facts,
+handoffs, closures and areas straight from the browser:
+
+![Compose — write facts, handoffs and areas from the browser.](https://raw.githubusercontent.com/giorgiocreazione-web/facto/main/docs/compose.png)
+
+Plus the graph of every fact (filter by area or type), full-text search, the
+compass per area and statistics. English and Italian. Pro-only views appear as
+honest cards, never as traps.
 
 ## Works with your stack
 
@@ -122,7 +235,7 @@ case.*
 ## What your agent gets (MCP — read **and** write, in Free)
 
 `facto_status` · `facto_brief` · `facto_search` · `facto_add_fact` ·
-`facto_close_fact` · `facto_handoff` · `facto_add_area`
+`facto_close_fact` · `facto_handoff` · `facto_add_area` · `facto_remove_area`
 *(the CRM trio — entities, tasks, relations — joins in Pro).*
 
 ## The daily loop
@@ -180,27 +293,33 @@ Opt-in, never automatic. On Windows you get a real tray icon: double-click
 opens the dashboard, right-click gives you *Open dashboard* and *Quit*. On
 macOS and Linux the dashboard simply starts at login, always one click away.
 
-## The dashboard
-
-`facto dashboard` serves **Mission Control** locally: the graph of every fact
-(filter by area or type), the trust light, full-text search, the compass per
-area, statistics — and **Compose**, to write facts, handoffs and closures
-straight from the browser when you don't feel like opening a terminal.
-English and Italian. Pro-only views appear as honest cards, never as traps.
-
 ## Editions
 
-- **Free — this repo, MIT.** Engine, full CLI, session hook, complete MCP
-  (read *and* write), Mission Control including Compose, tray. Forever.
-- **Pro** *(coming)* — CRM with git auto-import, backups with retention,
-  encryption, access control, exports, project templates, browser onboarding.
-- **Max** *(coming)* — team sync over git (no server required) and the agent
-  fleet orchestrator.
+| | **Free** — this repo | **Pro** *(coming)* | **Max** *(coming)* |
+|---|---|---|---|
+| Engine: dated facts, bi-temporal history, trust light | ✅ | ✅ | ✅ |
+| Full CLI + session hook + snapshots | ✅ | ✅ | ✅ |
+| Complete MCP — read **and** write | ✅ | ✅ | ✅ |
+| Mission Control incl. Compose, EN/IT | ✅ | ✅ | ✅ |
+| Tray / start at login | ✅ | ✅ | ✅ |
+| CRM with git auto-import (entities · tasks · relations) | — | ✅ | ✅ |
+| Backups with retention, exports, project templates | — | ✅ | ✅ |
+| Encryption at rest + dashboard access control | — | ✅ | ✅ |
+| Browser onboarding wizard | — | ✅ | ✅ |
+| **Team sync over git** (no server required) | — | — | ✅ |
+| **Agent fleet orchestrator** | — | — | ✅ |
+| License | MIT, forever | commercial | commercial |
+
+The Free edition is not a demo: engine, CLI, MCP and dashboard are the full
+thing, MIT, forever.
 
 ## Learn more
 
-- [docs/CONCEPTS.md](docs/CONCEPTS.md) — facts, areas, the compass, the light.
-- [docs/SETUP.md](docs/SETUP.md) — manual setup, hook details, folder mode.
-- [examples/game-dev](examples/game-dev) — a worked example configuration.
+- [docs/CONCEPTS.md](https://github.com/giorgiocreazione-web/facto/blob/main/docs/CONCEPTS.md) — facts, areas, the compass, the light.
+- [docs/SETUP.md](https://github.com/giorgiocreazione-web/facto/blob/main/docs/SETUP.md) — manual setup, hook details, folder mode.
+- [examples/game-dev](https://github.com/giorgiocreazione-web/facto/tree/main/examples/game-dev) — a worked example configuration.
+- [CHANGELOG.md](https://github.com/giorgiocreazione-web/facto/blob/main/CHANGELOG.md) — what changed, release by release.
 
-MIT © Giorgio Cristea
+---
+
+MIT © Giorgio Cristea · Built and owned by [**WCA — Web Creation Agency**](https://wcagency.it)

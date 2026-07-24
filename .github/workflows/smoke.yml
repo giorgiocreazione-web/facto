@@ -8,6 +8,11 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Hardening: al token del workflow serve SOLO leggere il repo. Esplicito, cosi'
+# una PR esterna o un'action compromessa non possono scrivere nulla a nome nostro.
+permissions:
+  contents: read
+
 jobs:
   smoke:
     strategy:

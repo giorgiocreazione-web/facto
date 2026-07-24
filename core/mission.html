@@ -527,6 +527,8 @@
   .statusbar .sg{display:flex;align-items:center;gap:8px}
   .statusbar b{color:var(--dim);font-weight:500}
   .statusbar .sp{flex:1}
+  .statusbar .wca{color:var(--faint);text-decoration:none;font-size:10px;letter-spacing:.6px;transition:color .2s}
+  .statusbar .wca:hover,.statusbar .wca:focus-visible{color:var(--dim)}
   .statusbar .status,.statusbar .alerts,.statusbar .live,.statusbar .clock,.statusbar .lang{border:none;background:none;padding:0}
   .statusbar .status{gap:7px}
   .statusbar .clock{display:flex;align-items:center;gap:8px;text-align:left}
@@ -771,6 +773,7 @@
     <span class="sg"><b id="sbFacts">—</b> <span data-i18n="sb_facts">fatti vivi</span></span>
     <span class="sg"><b id="sbAreas">—</b> <span data-i18n="sb_areas">aree</span></span>
     <span class="sp"></span>
+    <a class="wca" href="https://wcagency.it" target="_blank" rel="noopener" title="Facto is built and owned by WCA — Web Creation Agency">FACTO · by WCA — wcagency.it</a>
     <div class="alerts zero" id="alerts" title="Allerte / Alerts" aria-label="Allerte"><span class="ico">🔔</span><span class="n">0</span><div class="alerts-pop" id="alertsPop"></div></div>
     <div class="lang" id="langTog" title="Lingua / Language"><span data-l="it">IT</span><span data-l="en">EN</span></div>
     <div class="live"><span class="dot"></span> <span data-i18n="live">LIVE</span></div>
