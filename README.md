@@ -137,6 +137,38 @@ case.*
    taken at session start (`.facto/backups`), so months of memory never hinge
    on anyone's discipline.
 
+## Several agents at once
+
+Yes — and it is a normal setup, not a hack. The database takes concurrent
+readers even while someone writes (SQLite in WAL mode) and a write that finds it
+busy waits its turn. *Verified, not assumed: four processes writing at the same
+instant, 48 facts, none lost.*
+
+Two things worth knowing:
+
+- **Give them different areas.** Facts pile up without conflict, but *state* and
+  *handoff* are one-per-area: if two agents write the handoff of the **same**
+  area, the last one wins (the earlier is closed into history, not lost).
+- **Need a hard boundary?** Launch an agent with `FACTO_AREA=<slug>` and it is
+  *refused* if it tries to write anywhere else — including the project-wide area:
+
+  ```
+  error: this agent can only write to [api], not [web]
+  ```
+
+## Where your data lives (no surprises)
+
+Every fact is written to `.facto/facto.db` **the moment it is recorded** — no
+save button, nothing buffered, nothing lost if a session dies. A silent snapshot
+goes to `.facto/backups` at session start (at most one every 12 hours, last ten
+kept). It never leaves your machine: no account, no cloud, no telemetry — and
+since the engine makes zero network calls, that is something you can check in
+the code rather than take on trust.
+
+Sessions **start** on their own — opening any agent in the folder injects the
+briefing. They do **not** end on their own: ask for the handoff before you
+close, or the next session knows *what* is true but not *where you were heading*.
+
 ## Always on (optional)
 
 ```bash

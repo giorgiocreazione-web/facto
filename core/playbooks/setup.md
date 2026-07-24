@@ -116,6 +116,34 @@ Then ask: *"anything here you'd like to change before we start working?"*
 The rule: **they must be able to use it without you.** If they'd have to ask
 "and now what?", you have not finished.
 
+### The three questions everyone asks next — answer them without being asked
+
+**"When is my stuff actually saved?"** — Immediately. Every fact is written to
+`.facto/facto.db` (SQLite, inside the project) the moment it is recorded: there
+is no save button and nothing is buffered. If a session dies mid-work, whatever
+was already recorded is there. A silent snapshot of the database is taken at
+session start into `.facto/backups` (at most one every 12 hours, last 10 kept).
+Nothing leaves the machine — no account, no cloud, no telemetry.
+
+**"How does a session start and end?"** — It *starts* by itself: opening any AI
+agent in this folder injects the briefing, you do nothing. It does **not** end
+by itself: there is no closing hook, so the handoff — the baton for next time —
+has to be written **before** you close. Say *"leave the handoff"*, or count on
+me doing it when we're wrapping up. A session closed without a handoff loses
+nothing that was recorded, but the next one restarts a step behind: it knows
+*what* is true, not *where we were heading*.
+
+**"Can I run several agents at once?"** — Yes. The database takes concurrent
+readers even while someone writes (SQLite in WAL mode), and a write that finds
+it busy waits its turn for up to five seconds. Two agents in two terminals on
+the same project is a normal, supported setup. Two things to know:
+- **Give them different areas.** Facts add up without conflict, but *state* and
+  *handoff* are one-per-area: if two agents write the handoff of the SAME area,
+  the last one wins and the earlier is closed into history.
+- To make the boundary hard, launch an agent with `FACTO_AREA=<slug>`: it will
+  be **refused** if it tries to write outside that area (or into `globale`).
+  Useful when you fan out work and want no crossing.
+
 ## The principle
 You are not filling a database — you are **writing the project's memory the way the
 expert who owns it would**: semantic, honest, current. If the human's mental model

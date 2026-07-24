@@ -477,6 +477,23 @@ def _fasi(tmp):
           (ctx[ctx.find("[Facto]"):][:90] + "…") if "[Facto]" in ctx else out[:120])
 
     # --- fase 7: la CLI del ciclo quotidiano ----------------------------------
+    # PARALLELO: il README promette «piu' agenti insieme». Quattro scritture
+    # simultanee sullo stesso DB non devono perdere nulla (SQLite WAL + attesa).
+    import concurrent.futures as _cf
+    with _cf.ThreadPoolExecutor(max_workers=4) as ex:
+        esiti = list(ex.map(
+            lambda i: sh([FACTO, "add", "app", "nota", f"parallelo {i}"], cwd=proj, env=env)[0],
+            range(4)))
+    n_par = 0
+    try:
+        _c = sqlite3.connect(os.path.join(proj, ".facto", "facto.db"))
+        n_par = _c.execute("SELECT COUNT(*) FROM fatti WHERE contenuto LIKE 'parallelo %'").fetchone()[0]
+        _c.close()
+    except Exception:
+        pass
+    check(all(e == 0 for e in esiti) and n_par == 4,
+          "quattro scritture SIMULTANEE: nessun fatto perso", f"{n_par}/4 nel DB")
+
     rc, out, _ = sh([FACTO, "add", "app", "decisione", "smoke: decisione di prova"], cwd=proj, env=env)
     check(rc == 0, "facto add", out.strip()[:80])
     rc, out, _ = sh([FACTO, "close", "app", "decisione", "--like", "smoke"], cwd=proj, env=env)
