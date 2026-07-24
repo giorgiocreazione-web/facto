@@ -61,7 +61,9 @@ inside those type-folders and **distribute it into the real module-areas as fact
 of the right type**: a payment decision is a `decisione` fact in `payments`, a
 build bug is a `bug` fact in `engine`. Facts that are genuinely cross-cutting (a
 global handoff, a project-wide decision) go into the **`globale`** area — never
-into a per-type area. If you catch yourself proposing an area whose name is a
+into a per-type area. ⚠ **`globale` already exists in every project and is
+reserved: do NOT call `facto_add_area` for it** (it will be refused). Just write
+into it: `facto_add_fact(area="globale", …)`. If you catch yourself proposing an area whose name is a
 *document type*, stop: that's a fact type, not a module.
 
 ## Step 4 — Propose and get confirmation (MANDATORY)
@@ -84,10 +86,35 @@ documents — this is what stops the memory from being "blind" on day one:
 Keep each fact short, one idea, dated. Then, for each active area, leave a
 `facto_handoff(area, text=…)` with where things stand right now.
 
-## Step 7 — Verify and hand over
+## Step 7 — Verify
+
 Call `facto_status` and `facto_brief` on one area. Confirm the memory reflects
-reality. Tell the human it's ready, and that from now on every session opens with
-this briefing. Point them to the day-to-day rules (the daily playbook).
+reality. **If `facto_status` disagrees with what you just wrote**, say so to the
+human instead of hiding it — a memory that lies about itself is worse than none.
+
+## Step 8 — TEACH them how to use it (never skip this)
+
+They just watched you build something they don't yet know how to run. Close the
+setup by teaching it, in **six short lines, plain language, no lecture**:
+
+1. **What just happened** — "your project now has a memory: N areas, M facts."
+2. **What happens by itself** — every session of any AI agent here opens with
+   this briefing; you don't have to paste context ever again.
+3. **What you do** — nothing special. Work as always: I record decisions, bugs
+   and state as they happen, and leave a handoff at the end.
+4. **How to look at it** — `facto dashboard` (browser: the graph, the search,
+   and Compose to write without a terminal) · `facto status` (the trust light)
+   · `facto brief <area>` (one area's compass).
+5. **How to fix it when it's wrong** — tell me ("that's no longer true"), or do
+   it yourself: `facto add-area` / `facto remove-area` / `facto add`.
+6. **What the light means** — green = trust it, yellow = check, red = refresh
+   first, new = nothing recorded here yet. It compares the memory with git, so
+   it can tell you when it has gone stale.
+
+Then ask: *"anything here you'd like to change before we start working?"*
+
+The rule: **they must be able to use it without you.** If they'd have to ask
+"and now what?", you have not finished.
 
 ## The principle
 You are not filling a database — you are **writing the project's memory the way the

@@ -352,6 +352,16 @@ if _crm:
 
 # ============================  ROUTING JSON-RPC / MCP  ============================
 def call_tool(params):
+    # Il config si carica all'IMPORT: questo processo e' partito quando il
+    # progetto era ancora vuoto, quindi senza rilettura le aree create durante
+    # la sessione non esisterebbero MAI per lui — facto_brief e facto_status
+    # risponderebbero "Unknown area" mentre il CLI (processo nuovo ogni volta)
+    # le vede benissimo. E' esattamente il flusso dell'onboarding: l'agente
+    # crea le aree e subito dopo prova a leggerle.
+    try:
+        mem.ricarica_aree_se_cambiate()
+    except Exception:
+        pass                     # una rilettura fallita non deve mai bloccare un tool
     name = params.get("name")
     args = params.get("arguments") or {}
     fn = DISPATCH.get(name)

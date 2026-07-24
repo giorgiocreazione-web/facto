@@ -445,6 +445,19 @@ def _fasi(tmp):
         check("✓ fact recorded" in testo_tool(r), "MCP facto_add_fact", testo_tool(r))
         r = m.call("tools/call", {"name": "facto_search", "arguments": {"text": "primo stato"}})
         check("smoke: primo stato" in testo_tool(r), "MCP facto_search ritrova il fatto")
+        # IL CASO WCA: questo server MCP e' partito quando il progetto era VUOTO.
+        # Senza rilettura del config, l'area appena creata non esiste per lui e
+        # facto_brief risponde «Unknown area» — mentre il CLI la vede benissimo.
+        r = m.call("tools/call", {"name": "facto_brief", "arguments": {"area": "app"}})
+        tb = testo_tool(r)
+        check("Unknown area" not in tb and "app" in tb.lower(),
+              "MCP: vede un'area creata DOPO il suo avvio (config riletto)", tb[:70])
+        r = m.call("tools/call", {"name": "facto_status", "arguments": {}})
+        ts = testo_tool(r)
+        # e il semaforo non deve gridare «no status recorded» col fatto appena scritto
+        check("app" in ts.lower() and "no status recorded" not in ts,
+              "MCP status: niente falso «nessuno stato» su un'area appena scritta",
+              [l for l in ts.splitlines() if "app" in l.lower()][:1])
         m.close()
     except Exception as e:
         fail("MCP round-trip", str(e))

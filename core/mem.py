@@ -553,6 +553,13 @@ def semaforo_progetto(con, slug, path):
     row = con.execute("SELECT fonte FROM fatti WHERE progetto=? AND tipo='stato' AND fonte LIKE 'git:%'"
                       " AND valido_fino_a IS NULL ORDER BY id DESC LIMIT 1", (slug,)).fetchone()
     h_reg = row[0].split(":", 1)[1] if row and row[0] and ":" in row[0] else None
+    # ATTENZIONE: h_reg e' lo stato ANCORATO A UN COMMIT (fonte "git:<hash>"), non
+    # "uno stato qualsiasi". Un'area piena di fatti scritti dall'agente (fonte
+    # "mcp") ha h_reg=None pur avendo eccome uno stato: dirle ROSSO «no status
+    # recorded» e' FALSO, e lo si legge come «la tua memoria non vale niente»
+    # subito dopo averla scritta. Serve distinguere i due casi.
+    ha_stato = con.execute("SELECT 1 FROM fatti WHERE progetto=? AND tipo='stato'"
+                           " AND valido_fino_a IS NULL LIMIT 1", (slug,)).fetchone() is not None
     indietro = 0
     if h_reg and h_reg != h_git:
         rl = git("rev-list", "--count", f"{h_reg}..{h_git}")
@@ -560,14 +567,17 @@ def semaforo_progetto(con, slug, path):
     sospetti = con.execute(
         "SELECT COUNT(*) FROM fatti WHERE progetto=? AND valido_fino_a IS NULL"
         " AND tipo='bloccante' AND valido_da < ?", (slug, d_git)).fetchone()[0]
-    if h_reg is None or indietro > 3 or sospetti > 3:
+    if (h_reg is None and not ha_stato) or indietro > 3 or sospetti > 3:
         sem = "ROSSO"
-    elif indietro > 0 or sospetti > 0:
-        sem = "GIALLO"
-    else:
+    elif h_reg is None or indietro > 0 or sospetti > 0:
+        sem = "GIALLO"          # stato scritto a mano/dall'agente: c'e', ma non
+    else:                       # e' ancora agganciato alla storia git
         sem = "VERDE"
     det = []
-    if h_reg is None: det.append(T("no status recorded", "nessuno stato registrato"))
+    if h_reg is None:
+        det.append(T("no status recorded", "nessuno stato registrato") if not ha_stato else
+                   T("state not yet anchored to git — run `facto ingest-git`",
+                     "stato non ancora agganciato a git — lancia `facto ingest-git`"))
     if indietro:      det.append(T(f"memory {indietro} commits behind git",
                                    f"registro indietro di {indietro} commit vs git"))
     if sospetti:      det.append(T(f"{sospetti} fact{'s' if sospetti != 1 else ''} possibly outdated by the code",
@@ -809,7 +819,13 @@ def add_area(slug, path, label=None):
     if not slug or not path:
         raise ValueError(T("slug and path are both required", "servono sia slug sia percorso"))
     if slug in ("globale", "progetto"):
-        raise ValueError(T(f"'{slug}' is a reserved name", f"'{slug}' è un nome riservato"))
+        # non basta rifiutare: chi ci prova (agente o umano) deve sapere che
+        # quell'area C'E' GIA' e come usarla — succede al primo onboarding.
+        raise ValueError(T(
+            f"'{slug}' already exists and is reserved for project-wide facts — "
+            f"don't create it, just write into it: facto_add_fact(area='{slug}', ...)",
+            f"'{slug}' esiste già ed è riservata ai fatti trasversali — non va creata, "
+            f"ci si scrive direttamente: facto_add_fact(area='{slug}', ...)"))
     cfg_path = CFG.get("_path")
     if not cfg_path or not os.path.isfile(cfg_path):
         raise ValueError(T("no facto.config.json here — run `facto connect` first",
