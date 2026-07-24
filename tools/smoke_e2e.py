@@ -558,9 +558,17 @@ def _fasi(tmp):
             # solo all'avvio, resterebbe vuota per sempre.
             try:
                 sh([FACTO, "add-area", "live", "src", "--label", "Added live"], cwd=proj, env=env)
+                # e un FATTO dentro l'area appena nata: e' il caso vero segnalato
+                # dal collaudo (un agente scrive un handoff in un'area creata dopo
+                # l'avvio della dashboard). Se l'area non viene ricaricata, il
+                # fatto non ha un nodo a cui attaccarsi e sparisce dal grafo.
+                sh([FACTO, "add", "live", "stato", "scritto nell'area appena nata"],
+                   cwd=proj, env=env)
                 with urllib.request.urlopen(base + "/api/state", timeout=5) as r:
                     st3 = json.loads(r.read().decode("utf-8", "replace"))
-                area_a_caldo = any(p.get("slug") == "live" for p in st3.get("progetti", []))
+                area_a_caldo = (any(p.get("slug") == "live" for p in st3.get("progetti", []))
+                                and any(f.get("progetto") == "live"
+                                        for f in st3.get("fatti", [])))
                 # crea/rimuovi AREA dalla dashboard (Componi): chi non vive nel
                 # terminale deve poter disegnare la struttura da browser.
                 for op, dati, atteso in (
@@ -592,7 +600,7 @@ def _fasi(tmp):
           "Componi nel Free: POST /api/write/fatto scrive e il fatto riappare",
           str(scritto)[:100])
     check(area_a_caldo,
-          "dashboard: vede un'area creata MENTRE e' aperta (hot-reload del config)")
+          "dashboard: area E fatti creati MENTRE e' aperta (hot-reload del config)")
     check(area_web.get("area", {}).get("ok") is True and area_web.get("area-remove", {}).get("ok") is True,
           "dashboard: si crea e si rimuove un'AREA dal browser (Componi)",
           str(area_web.get("area", {}).get("msg", ""))[:70])
